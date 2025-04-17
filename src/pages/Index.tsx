@@ -52,6 +52,10 @@ const NoteContainer = () => {
     setSidebarOpen(prev => !prev);
   };
   
+  const handleCreateNote = () => {
+    createNote();
+  };
+  
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <div className="flex-1 flex overflow-hidden">
@@ -86,7 +90,7 @@ const NoteContainer = () => {
           
           {isMobile && (
             <button
-              onClick={createNote}
+              onClick={handleCreateNote}
               className="fixed bottom-6 right-6 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors z-10"
               aria-label="Create new note"
             >

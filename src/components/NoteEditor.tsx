@@ -196,14 +196,14 @@ const NoteEditor: React.FC = () => {
           </DialogHeader>
           <div className="py-4">
             <Select
-              value={currentNote.folderId || ""}
-              onValueChange={(value) => handleMoveToFolder(value === "" ? undefined : value)}
+              value={currentNote.folderId || "unfiled"}
+              onValueChange={(value) => handleMoveToFolder(value === "unfiled" ? undefined : value)}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a folder" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unfiled</SelectItem>
+                <SelectItem value="unfiled">Unfiled</SelectItem>
                 {folders.map(folder => (
                   <SelectItem key={folder.id} value={folder.id}>
                     {folder.name}
