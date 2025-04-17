@@ -4,13 +4,14 @@ import { useNotes } from '@/context/NoteContext';
 import RecordingButton from './RecordingButton';
 import AudioPlayer from './AudioPlayer';
 import { formatDistanceToNow } from 'date-fns';
-import { Save, Trash2, Headphones, FolderOpen, Download, FileDown } from 'lucide-react';
+import { Save, Trash2, Headphones, FolderOpen, Download, FileDown, Upload } from 'lucide-react';
 import RecordingsManager from './RecordingsManager';
 import VoiceRecordingsDropdown from './VoiceRecordingsDropdown';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { exportNoteAsText, exportNotesAsPDF } from '@/lib/exportUtils';
+import RichTextEditor from './RichTextEditor';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const NoteEditor: React.FC = () => {
-  const { currentNote, updateNote, deleteNote, folders } = useNotes();
+  const { currentNote, updateNote, deleteNote, folders, importRecording } = useNotes();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -28,6 +29,7 @@ const NoteEditor: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRecordingsManager, setShowRecordingsManager] = useState(false);
   const [showMoveToFolder, setShowMoveToFolder] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Sync local state with current note
   useEffect(() => {
@@ -44,8 +46,8 @@ const NoteEditor: React.FC = () => {
     setTitle(e.target.value);
   };
   
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
   };
   
   const getCursorPosition = useCallback(() => {
@@ -113,6 +115,43 @@ const NoteEditor: React.FC = () => {
     exportNotesAsPDF([currentNote], currentNote.title || 'Note Export');
   };
   
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!currentNote || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    if (file.type.startsWith('audio/')) {
+      await importRecording(currentNote.id, file);
+    }
+    
+    // Reset the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!currentNote) return;
+    
+    const files = Array.from(e.dataTransfer.files);
+    const audioFiles = files.filter(file => file.type.startsWith('audio/'));
+    
+    if (audioFiles.length > 0) {
+      for (const file of audioFiles) {
+        await importRecording(currentNote.id, file);
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  
   if (!currentNote) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted-foreground p-6">
@@ -122,7 +161,11 @@ const NoteEditor: React.FC = () => {
   }
   
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div 
+      className="flex flex-col h-full overflow-hidden"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center space-x-2">
           <input
@@ -157,6 +200,22 @@ const NoteEditor: React.FC = () => {
             title="Move to folder"
           >
             <FolderOpen size={16} />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleImportClick}
+            title="Import audio recording"
+          >
+            <Upload size={16} />
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="audio/*"
+              onChange={handleFileInputChange}
+            />
           </Button>
           
           {currentNote.recordings.length > 0 && (
@@ -195,12 +254,10 @@ const NoteEditor: React.FC = () => {
       </div>
       
       <div className="flex-1 overflow-auto p-4">
-        <textarea
-          ref={textareaRef}
-          value={content}
+        <RichTextEditor
+          content={content}
           onChange={handleContentChange}
           placeholder="Type your note here..."
-          className="w-full h-full min-h-[200px] resize-none bg-transparent border-none outline-none focus:ring-0 text-foreground"
         />
         
         {currentNote.recordings.length > 0 && (
