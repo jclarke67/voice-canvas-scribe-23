@@ -1,47 +1,62 @@
 
 import React from 'react';
-import { FileText, Mic, BookOpen } from 'lucide-react';
 import { useNotes } from '@/context/NoteContext';
+import { Button } from './ui/button';
+import { Mic, Pen, Plus } from 'lucide-react';
 
-const EmptyState: React.FC = () => {
+const EmptyState = () => {
   const { createNote } = useNotes();
   
+  const handleCreateNote = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    createNote();
+  };
+  
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6 text-center animate-fade-in">
-      <div className="mb-6">
-        <BookOpen size={48} className="mx-auto text-primary opacity-80" />
-      </div>
-      
-      <h2 className="text-2xl font-semibold mb-3">Welcome to Voice Canvas</h2>
-      
-      <p className="text-muted-foreground mb-6 max-w-md">
-        Create notes with both text and voice recordings. A digital canvas for all your thoughts.
-      </p>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg mb-8">
-        <div className="border rounded-lg p-4 bg-card/50">
-          <FileText size={24} className="mb-2 text-primary" />
-          <h3 className="font-medium mb-1">Write</h3>
-          <p className="text-sm text-muted-foreground">
-            Type your thoughts, ideas, and notes in a clean interface
-          </p>
+    <div className="flex flex-col items-center justify-center h-full text-center p-6">
+      <div className="max-w-md space-y-6">
+        <div className="flex justify-center mb-6">
+          <div className="rounded-full bg-primary/10 p-6">
+            <Mic size={32} className="text-primary" />
+          </div>
         </div>
         
-        <div className="border rounded-lg p-4 bg-card/50">
-          <Mic size={24} className="mb-2 text-primary" />
-          <h3 className="font-medium mb-1">Record</h3>
-          <p className="text-sm text-muted-foreground">
-            Capture voice memos alongside your text notes
-          </p>
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Your Voice Canvas is empty
+        </h2>
+        
+        <p className="text-muted-foreground">
+          Start by creating your first note. You can type text and add voice recordings to capture your thoughts.
+        </p>
+        
+        <div className="flex flex-col space-y-2 pt-4">
+          <Button 
+            onClick={handleCreateNote}
+            className="w-full"
+          >
+            <Plus size={18} className="mr-2" />
+            Create a new note
+          </Button>
+        </div>
+        
+        <div className="flex flex-col gap-3 pt-6">
+          <div className="flex items-start">
+            <Pen size={18} className="mt-0.5 mr-2 text-muted-foreground" />
+            <div className="text-sm text-left">
+              <p className="font-medium">Type and organize</p>
+              <p className="text-muted-foreground">Create notes and organize them in folders.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start">
+            <Mic size={18} className="mt-0.5 mr-2 text-muted-foreground" />
+            <div className="text-sm text-left">
+              <p className="font-medium">Record your voice</p>
+              <p className="text-muted-foreground">Add voice recordings to your notes with a single click.</p>
+            </div>
+          </div>
         </div>
       </div>
-      
-      <button
-        onClick={createNote}
-        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-      >
-        Create Your First Note
-      </button>
     </div>
   );
 };

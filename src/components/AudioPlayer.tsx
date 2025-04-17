@@ -26,6 +26,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
     const storedAudio = getAudioFromStorage(`audio-${audioId}`);
     if (storedAudio) {
       setAudioUrl(storedAudio);
+    } else {
+      console.error(`Audio not found for ID: audio-${audioId}`);
     }
     setIsLoading(false);
     
@@ -123,7 +125,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
           className={`h-8 w-8 rounded-full flex items-center justify-center text-primary-foreground transition-colors ${
             isLoading ? 'bg-primary/50 cursor-wait' : 'bg-primary hover:bg-primary/90'
           }`}
-          disabled={isLoading}
+          disabled={isLoading || !audioUrl}
         >
           {isPlaying ? <Pause size={16} /> : <Play size={16} />}
         </button>

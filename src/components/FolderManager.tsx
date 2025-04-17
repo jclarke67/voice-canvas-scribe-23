@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Folder, Note } from '@/types';
-import { FolderPlus, Edit2, Trash2 } from 'lucide-react';
+import { FolderPlus, Edit2, Trash2, FileDown } from 'lucide-react';
+import { exportFolderAsPDF } from '@/lib/exportUtils';
 
 interface FolderManagerProps {
   isOpen: boolean;
@@ -13,9 +14,10 @@ interface FolderManagerProps {
 }
 
 const FolderManager: React.FC<FolderManagerProps> = ({ isOpen, onClose }) => {
-  const { folders, notes, createFolder, updateFolder, deleteFolder, updateNote } = useNotes();
+  const { folders, notes, createFolder, updateFolder, deleteFolder } = useNotes();
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null);
   
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -32,9 +34,23 @@ const FolderManager: React.FC<FolderManagerProps> = ({ isOpen, onClose }) => {
   };
   
   const handleDeleteFolder = (folderId: string) => {
-    if (window.confirm('Are you sure you want to delete this folder? Notes will be moved to Unfiled.')) {
+    if (deletingFolderId === folderId) {
+      // Confirmed deletion
       deleteFolder(folderId);
+      setDeletingFolderId(null);
+    } else {
+      // First click, show confirmation
+      setDeletingFolderId(folderId);
+      
+      // Auto-reset after 3 seconds
+      setTimeout(() => {
+        setDeletingFolderId(null);
+      }, 3000);
     }
+  };
+  
+  const handleExportFolder = (folder: Folder) => {
+    exportFolderAsPDF(folder, notes);
   };
   
   const getNoteCountInFolder = (folderId: string): number => {
@@ -93,14 +109,27 @@ const FolderManager: React.FC<FolderManagerProps> = ({ isOpen, onClose }) => {
                         <Button 
                           size="sm" 
                           variant="ghost" 
+                          onClick={() => handleExportFolder(folder)}
+                        >
+                          <FileDown size={14} />
+                        </Button>
+                        
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
                           onClick={() => setEditingFolder(folder)}
                         >
                           <Edit2 size={14} />
                         </Button>
+                        
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          className="text-destructive hover:bg-destructive/10"
+                          className={`${
+                            deletingFolderId === folder.id 
+                              ? 'bg-destructive text-destructive-foreground' 
+                              : 'text-destructive hover:bg-destructive/10'
+                          }`}
                           onClick={() => handleDeleteFolder(folder.id)}
                         >
                           <Trash2 size={14} />

@@ -4,11 +4,20 @@ import { useNotes } from '@/context/NoteContext';
 import RecordingButton from './RecordingButton';
 import AudioPlayer from './AudioPlayer';
 import { formatDistanceToNow } from 'date-fns';
-import { Save, Trash2, Headphones, FolderOpen } from 'lucide-react';
+import { Save, Trash2, Headphones, FolderOpen, Download, FileDown } from 'lucide-react';
 import RecordingsManager from './RecordingsManager';
+import VoiceRecordingsDropdown from './VoiceRecordingsDropdown';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { exportNoteAsText, exportNotesAsPDF } from '@/lib/exportUtils';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuTrigger,
+  DropdownMenuItem, 
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 
 const NoteEditor: React.FC = () => {
   const { currentNote, updateNote, deleteNote, folders } = useNotes();
@@ -94,6 +103,16 @@ const NoteEditor: React.FC = () => {
     setShowMoveToFolder(false);
   };
   
+  const handleExportNote = () => {
+    if (!currentNote) return;
+    exportNoteAsText(currentNote);
+  };
+  
+  const handleExportAsPDF = () => {
+    if (!currentNote) return;
+    exportNotesAsPDF([currentNote], currentNote.title || 'Note Export');
+  };
+  
   if (!currentNote) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted-foreground p-6">
@@ -115,6 +134,22 @@ const NoteEditor: React.FC = () => {
           />
         </div>
         <div className="flex items-center space-x-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" title="Download note">
+                <FileDown size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportNote}>
+                Export as Text
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportAsPDF}>
+                Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Button 
             variant="ghost" 
             size="sm"
@@ -124,14 +159,20 @@ const NoteEditor: React.FC = () => {
             <FolderOpen size={16} />
           </Button>
           
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setShowRecordingsManager(true)}
-            title="Manage recordings"
-          >
-            <Headphones size={16} />
-          </Button>
+          {currentNote.recordings.length > 0 && (
+            <>
+              <VoiceRecordingsDropdown noteId={currentNote.id} />
+              
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowRecordingsManager(true)}
+                title="Manage all recordings"
+              >
+                <Headphones size={16} />
+              </Button>
+            </>
+          )}
           
           <span className="text-sm text-muted-foreground">
             {formatDistanceToNow(currentNote.updatedAt, { addSuffix: true })}
@@ -170,6 +211,7 @@ const NoteEditor: React.FC = () => {
                 key={recording.id} 
                 audioId={recording.audioUrl} 
                 duration={recording.duration} 
+                name={recording.name}
               />
             ))}
           </div>
