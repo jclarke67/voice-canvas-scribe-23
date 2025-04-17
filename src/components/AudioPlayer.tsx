@@ -7,9 +7,10 @@ import { getAudioFromStorage } from '@/lib/storage';
 interface AudioPlayerProps {
   audioId: string;
   duration: number;
+  name?: string;
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration }) => {
+const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -110,6 +111,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration }) => {
     <div className="rounded-lg bg-primary/5 p-3 my-3 animate-fade-in">
       {audioUrl && (
         <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      )}
+      
+      {name && (
+        <div className="text-sm font-medium mb-2">{name}</div>
       )}
       
       <div className="flex items-center space-x-2">

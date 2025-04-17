@@ -1,5 +1,5 @@
 
-import { Note, Recording } from '@/types';
+import { Note, Recording, Folder } from '@/types';
 
 // Get all notes from localStorage
 export const getNotes = (): Note[] => {
@@ -19,13 +19,31 @@ export const saveNotes = (notes: Note[]): void => {
   localStorage.setItem('voice-canvas-notes', JSON.stringify(notes));
 };
 
+// Get all folders from localStorage
+export const getFolders = (): Folder[] => {
+  const foldersJson = localStorage.getItem('voice-canvas-folders');
+  if (!foldersJson) return [];
+  
+  try {
+    return JSON.parse(foldersJson);
+  } catch (error) {
+    console.error('Failed to parse folders from localStorage', error);
+    return [];
+  }
+};
+
+// Save folders to localStorage
+export const saveFolders = (folders: Folder[]): void => {
+  localStorage.setItem('voice-canvas-folders', JSON.stringify(folders));
+};
+
 // Generate a unique ID
 export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
 
 // Create a new empty note
-export const createEmptyNote = (): Note => {
+export const createEmptyNote = (folderId?: string): Note => {
   const now = Date.now();
   return {
     id: generateId(),
@@ -34,6 +52,7 @@ export const createEmptyNote = (): Note => {
     createdAt: now,
     updatedAt: now,
     recordings: [],
+    ...(folderId ? { folderId } : {})
   };
 };
 

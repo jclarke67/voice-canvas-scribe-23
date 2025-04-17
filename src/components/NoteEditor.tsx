@@ -4,15 +4,21 @@ import { useNotes } from '@/context/NoteContext';
 import RecordingButton from './RecordingButton';
 import AudioPlayer from './AudioPlayer';
 import { formatDistanceToNow } from 'date-fns';
-import { Save, Trash2 } from 'lucide-react';
+import { Save, Trash2, Headphones, FolderOpen } from 'lucide-react';
+import RecordingsManager from './RecordingsManager';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const NoteEditor: React.FC = () => {
-  const { currentNote, updateNote, deleteNote } = useNotes();
+  const { currentNote, updateNote, deleteNote, folders } = useNotes();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRecordingsManager, setShowRecordingsManager] = useState(false);
+  const [showMoveToFolder, setShowMoveToFolder] = useState(false);
   
   // Sync local state with current note
   useEffect(() => {
@@ -77,6 +83,17 @@ const NoteEditor: React.FC = () => {
     }
   };
   
+  const handleMoveToFolder = (folderId: string | undefined) => {
+    if (!currentNote) return;
+    
+    updateNote({
+      ...currentNote,
+      folderId
+    });
+    
+    setShowMoveToFolder(false);
+  };
+  
   if (!currentNote) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted-foreground p-6">
@@ -97,13 +114,33 @@ const NoteEditor: React.FC = () => {
             className="text-lg font-medium bg-transparent border-none outline-none focus:ring-0 w-full"
           />
         </div>
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-          <span>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setShowMoveToFolder(true)}
+            title="Move to folder"
+          >
+            <FolderOpen size={16} />
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setShowRecordingsManager(true)}
+            title="Manage recordings"
+          >
+            <Headphones size={16} />
+          </Button>
+          
+          <span className="text-sm text-muted-foreground">
             {formatDistanceToNow(currentNote.updatedAt, { addSuffix: true })}
           </span>
+          
           <div className={`transition-opacity duration-300 ${isSaving ? 'opacity-100' : 'opacity-0'}`}>
             <Save size={16} />
           </div>
+          
           <button 
             onClick={handleDeleteNote}
             className={`p-1 rounded-md transition-colors ${
@@ -145,6 +182,43 @@ const NoteEditor: React.FC = () => {
           {currentNote.recordings.length} voice note{currentNote.recordings.length !== 1 ? 's' : ''}
         </div>
       </div>
+      
+      {/* Dialogs */}
+      <RecordingsManager
+        isOpen={showRecordingsManager}
+        onClose={() => setShowRecordingsManager(false)}
+      />
+      
+      <Dialog open={showMoveToFolder} onOpenChange={setShowMoveToFolder}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Move to Folder</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Select
+              value={currentNote.folderId || ""}
+              onValueChange={(value) => handleMoveToFolder(value === "" ? undefined : value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a folder" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Unfiled</SelectItem>
+                {folders.map(folder => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMoveToFolder(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
