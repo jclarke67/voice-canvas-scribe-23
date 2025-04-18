@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNotes } from '@/context/NoteContext';
 import NoteCard from './NoteCard';
@@ -17,10 +16,12 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
-  const { notes, folders, currentNote, setCurrentNote, createNote, deleteFolder } = useNotes();
+  const { notes, folders, currentNote, setCurrentNote, createNote, deleteFolder, updateFolder } = useNotes();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [showFolderManager, setShowFolderManager] = useState(false);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editingFolderName, setEditingFolderName] = useState('');
   
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -73,14 +74,28 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     folderNotes[folder.id] = sortedNotes.filter(note => note.folderId === folder.id);
   });
   
+  const handleStartEditingFolder = (folderId: string, folderName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingFolderId(folderId);
+    setEditingFolderName(folderName);
+  };
+  
+  const handleSaveFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingFolderId && editingFolderName.trim()) {
+      updateFolder(editingFolderId, editingFolderName.trim());
+      setEditingFolderId(null);
+      setEditingFolderName('');
+    }
+  };
+  
+  // Update the folders mapping section to include renaming functionality
   return (
     <>
-      <div 
-        className={cn(
-          "h-full border-r bg-card transition-all duration-300 flex flex-col",
-          isOpen ? "w-64" : "w-0 overflow-hidden"
-        )}
-      >
+      <div className={cn(
+        "h-full border-r bg-card transition-all duration-300 flex flex-col",
+        isOpen ? "flex-1" : "w-0 overflow-hidden"
+      )}>
         <div className="flex items-center justify-between p-4 border-b">
           <h1 className="font-semibold text-lg">Voice Canvas</h1>
           <div className="flex items-center space-x-1">
@@ -147,13 +162,34 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               className="mb-1"
             >
               <CollapsibleTrigger className="w-full flex items-center justify-between p-2 hover:bg-accent/50 rounded-md">
-                <div className="flex items-center text-sm">
+                <div className="flex items-center text-sm flex-1">
                   <Folder size={16} className="mr-2 text-primary" />
-                  <span>{folder.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    ({folderNotes[folder.id]?.length || 0})
-                  </span>
+                  {editingFolderId === folder.id ? (
+                    <form onSubmit={handleSaveFolder} className="flex-1">
+                      <input
+                        type="text"
+                        value={editingFolderName}
+                        onChange={(e) => setEditingFolderName(e.target.value)}
+                        onBlur={handleSaveFolder}
+                        className="w-full bg-background px-2 py-1 rounded-md text-sm"
+                        autoFocus
+                      />
+                    </form>
+                  ) : (
+                    <>
+                      <span 
+                        onDoubleClick={(e) => handleStartEditingFolder(folder.id, folder.name, e)}
+                        className="flex-1"
+                      >
+                        {folder.name}
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({folderNotes[folder.id]?.length || 0})
+                      </span>
+                    </>
+                  )}
                 </div>
+                
                 <div className="flex items-center space-x-1">
                   <button
                     onClick={(e) => handleExportFolder(folder.id, e)}
