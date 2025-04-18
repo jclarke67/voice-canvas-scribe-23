@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNotes } from '@/context/NoteContext';
 import RecordingButton from './RecordingButton';
@@ -29,7 +28,6 @@ const NoteEditor: React.FC = () => {
   const [showRecordingsManager, setShowRecordingsManager] = useState(false);
   const [showMoveToFolder, setShowMoveToFolder] = useState(false);
   
-  // Sync local state with current note
   useEffect(() => {
     if (currentNote) {
       setTitle(currentNote.title);
@@ -67,7 +65,6 @@ const NoteEditor: React.FC = () => {
     }, 500);
   }, [currentNote, title, content, updateNote]);
   
-  // Auto-save on title/content change (debounced)
   useEffect(() => {
     if (!currentNote) return;
     
@@ -85,7 +82,6 @@ const NoteEditor: React.FC = () => {
       setShowDeleteConfirm(false);
     } else {
       setShowDeleteConfirm(true);
-      // Auto-reset confirmation after 3 seconds
       setTimeout(() => {
         setShowDeleteConfirm(false);
       }, 3000);
@@ -194,17 +190,17 @@ const NoteEditor: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4 flex flex-col">
         <textarea
           ref={textareaRef}
           value={content}
           onChange={handleContentChange}
           placeholder="Type your note here..."
-          className="w-full h-full min-h-[200px] resize-none bg-transparent border-none outline-none focus:ring-0 text-foreground"
+          className="w-full flex-1 resize-none bg-transparent border-none outline-none focus:ring-0 text-foreground min-h-[200px]"
         />
         
         {currentNote.recordings.length > 0 && (
-          <div className="mt-4">
+          <div className="mt-4 border-t pt-4">
             <h3 className="font-medium text-sm mb-2">Voice notes</h3>
             {currentNote.recordings.map(recording => (
               <AudioPlayer 
@@ -218,14 +214,13 @@ const NoteEditor: React.FC = () => {
         )}
       </div>
       
-      <div className="p-3 border-t flex justify-between items-center">
+      <div className="border-t flex justify-between items-center p-3">
         <RecordingButton getCursorPosition={getCursorPosition} />
         <div className="text-xs text-muted-foreground">
           {currentNote.recordings.length} voice note{currentNote.recordings.length !== 1 ? 's' : ''}
         </div>
       </div>
       
-      {/* Dialogs */}
       <RecordingsManager
         isOpen={showRecordingsManager}
         onClose={() => setShowRecordingsManager(false)}

@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Note } from '@/types';
 import { useNotes } from '@/context/NoteContext';
-import { CheckSquare, Square, Headphones } from 'lucide-react';
+import { CheckSquare, Square, Headphones, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface NoteCardProps {
   note: Note;
@@ -13,7 +15,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
   const { 
     setCurrentNote, 
     selectedNoteIds, 
-    toggleNoteSelection
+    toggleNoteSelection,
+    deleteNote
   } = useNotes();
   
   const isSelected = selectedNoteIds.includes(note.id);
@@ -33,6 +36,13 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleNoteSelection(note.id);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this note?')) {
+      deleteNote(note.id);
+    }
   };
   
   return (
@@ -58,7 +68,17 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
       </div>
       
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{note.title || "Untitled Note"}</div>
+        <div className="flex justify-between items-start">
+          <div className="font-medium truncate">{note.title || "Untitled Note"}</div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:text-destructive -mr-1"
+            onClick={handleDelete}
+          >
+            <Trash2 size={14} />
+          </Button>
+        </div>
         
         <div className="flex items-center mt-1 text-xs text-muted-foreground">
           <span className="truncate">

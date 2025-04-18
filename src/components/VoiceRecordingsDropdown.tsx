@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNotes } from '@/context/NoteContext';
 import { 
@@ -99,7 +98,7 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
     <>
       <audio ref={audioRef} />
       
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" title="Voice recordings">
             <Headphones size={16} />
