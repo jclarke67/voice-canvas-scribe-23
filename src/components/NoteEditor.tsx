@@ -4,13 +4,14 @@ import { useNotes } from '@/context/NoteContext';
 import RecordingButton from './RecordingButton';
 import AudioPlayer from './AudioPlayer';
 import { formatDistanceToNow } from 'date-fns';
-import { Save, Trash2, Headphones, FolderOpen, Download, FileDown } from 'lucide-react';
+import { Save, Trash2, Headphones, FolderOpen, Download, FileDown, Upload } from 'lucide-react';
 import RecordingsManager from './RecordingsManager';
 import VoiceRecordingsDropdown from './VoiceRecordingsDropdown';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { exportNoteAsText, exportNotesAsPDF } from '@/lib/exportUtils';
+import QuillEditor from './QuillEditor';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -23,11 +24,12 @@ const NoteEditor: React.FC = () => {
   const { currentNote, updateNote, deleteNote, folders } = useNotes();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRecordingsManager, setShowRecordingsManager] = useState(false);
   const [showMoveToFolder, setShowMoveToFolder] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   
   // Sync local state with current note
   useEffect(() => {
@@ -44,12 +46,12 @@ const NoteEditor: React.FC = () => {
     setTitle(e.target.value);
   };
   
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
   };
   
   const getCursorPosition = useCallback(() => {
-    return textareaRef.current?.selectionStart || 0;
+    return 0; // With Quill, we'll just place recordings at the start
   }, []);
   
   const saveNote = useCallback(() => {
@@ -112,6 +114,45 @@ const NoteEditor: React.FC = () => {
     if (!currentNote) return;
     exportNotesAsPDF([currentNote], currentNote.title || 'Note Export');
   };
+
+  // Handle file drop for audio import
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (!currentNote) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    
+    // Filter for audio files
+    const audioFiles = files.filter(file => file.type.startsWith('audio/'));
+    
+    if (audioFiles.length === 0) {
+      return;
+    }
+    
+    // Process each audio file
+    for (const file of audioFiles) {
+      try {
+        await useNotes().importRecording(currentNote.id, file);
+      } catch (error) {
+        console.error('Error importing audio file:', error);
+      }
+    }
+  };
   
   if (!currentNote) {
     return (
@@ -122,7 +163,23 @@ const NoteEditor: React.FC = () => {
   }
   
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div 
+      className="flex flex-col h-full overflow-hidden"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      ref={containerRef}
+    >
+      {dragActive && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 border-2 border-dashed border-primary rounded-lg">
+          <div className="text-center p-4">
+            <Upload size={48} className="mx-auto text-primary mb-2" />
+            <h3 className="text-xl font-medium">Drop audio files to import</h3>
+            <p className="text-muted-foreground">Supported formats: MP3, WAV, WebM, OGG</p>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center space-x-2">
           <input
@@ -195,13 +252,7 @@ const NoteEditor: React.FC = () => {
       </div>
       
       <div className="flex-1 overflow-auto p-4">
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={handleContentChange}
-          placeholder="Type your note here..."
-          className="w-full h-full min-h-[200px] resize-none bg-transparent border-none outline-none focus:ring-0 text-foreground"
-        />
+        <QuillEditor value={content} onChange={handleContentChange} />
         
         {currentNote.recordings.length > 0 && (
           <div className="mt-4">
