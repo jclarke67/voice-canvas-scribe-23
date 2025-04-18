@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNotes } from '@/context/NoteContext';
 import RecordingButton from './RecordingButton';
@@ -200,8 +201,8 @@ const NoteEditor: React.FC = () => {
         />
         
         {currentNote.recordings.length > 0 && (
-          <div className="mt-4 border-t pt-4">
-            <h3 className="font-medium text-sm mb-2">Voice notes</h3>
+          <div className="mt-2 border-t pt-2">
+            <h3 className="font-medium text-sm mb-1">Voice notes</h3>
             {currentNote.recordings.map(recording => (
               <AudioPlayer 
                 key={recording.id} 
@@ -214,7 +215,7 @@ const NoteEditor: React.FC = () => {
         )}
       </div>
       
-      <div className="border-t flex justify-between items-center p-3">
+      <div className="border-t p-2 flex justify-between items-center">
         <RecordingButton getCursorPosition={getCursorPosition} />
         <div className="text-xs text-muted-foreground">
           {currentNote.recordings.length} voice note{currentNote.recordings.length !== 1 ? 's' : ''}
