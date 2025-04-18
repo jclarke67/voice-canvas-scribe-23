@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNotes } from '@/context/NoteContext';
 import NoteCard from './NoteCard';
@@ -203,7 +204,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                     key={note.id}
                     note={note}
                     isActive={currentNote?.id === note.id}
-                    onClick={() => setCurrentNote(note)}
                   />
                 ))
               ) : (
@@ -251,7 +251,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                 key={note.id}
                 note={note}
                 isActive={currentNote?.id === note.id}
-                onClick={() => setCurrentNote(note)}
               />
             ))
           : unfilteredNotes.map(note => (
@@ -259,7 +258,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                 key={note.id}
                 note={note}
                 isActive={currentNote?.id === note.id}
-                onClick={() => setCurrentNote(note)}
               />
             ))
         }
