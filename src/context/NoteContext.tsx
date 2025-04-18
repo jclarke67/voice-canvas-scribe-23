@@ -10,7 +10,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
-  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
 
   useEffect(() => {
     const savedNotes = getNotes();
@@ -54,16 +53,11 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteNote = (id: string) => {
-    // If the note is in selectedNotes, remove it
-    if (selectedNotes.includes(id)) {
-      setSelectedNotes(prev => prev.filter(noteId => noteId !== id));
-    }
-    
     // First, clean up any recordings associated with this note
     const noteToDelete = notes.find(note => note.id === id);
     if (noteToDelete) {
       noteToDelete.recordings.forEach(recording => {
-        removeAudioFromStorage(recording.audioUrl);
+        removeAudioFromStorage(`audio-${recording.audioUrl}`);
       });
     }
 
@@ -83,37 +77,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return updatedNotes;
     });
     toast.success('Note deleted');
-  };
-
-  // New function to delete multiple notes at once
-  const deleteNotes = (ids: string[]) => {
-    // Clean up recordings for all notes to be deleted
-    const notesToDelete = notes.filter(note => ids.includes(note.id));
-    notesToDelete.forEach(note => {
-      note.recordings.forEach(recording => {
-        removeAudioFromStorage(recording.audioUrl);
-      });
-    });
-
-    setNotes(prevNotes => {
-      const updatedNotes = prevNotes.filter(note => !ids.includes(note.id));
-      saveNotes(updatedNotes);
-      
-      // If the current note is among deleted notes, set current note to the first available note or null
-      if (currentNote && ids.includes(currentNote.id)) {
-        if (updatedNotes.length > 0) {
-          setCurrentNote(updatedNotes[0]);
-        } else {
-          setCurrentNote(null);
-        }
-      }
-      
-      return updatedNotes;
-    });
-
-    // Clear selected notes
-    setSelectedNotes([]);
-    toast.success(`${ids.length} notes deleted`);
   };
 
   const saveRecording = (noteId: string, recordingData: Omit<Recording, 'id' | 'name'>) => {
@@ -188,7 +151,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const recordingToDelete = note.recordings.find(rec => rec.id === recordingId);
           if (recordingToDelete) {
             // Remove audio data from storage
-            removeAudioFromStorage(recordingToDelete.audioUrl);
+            removeAudioFromStorage(`audio-${recordingToDelete.audioUrl}`);
           }
           
           const updatedRecordings = note.recordings.filter(rec => rec.id !== recordingId);
@@ -219,8 +182,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newFolder: Folder = {
       id: generateId(),
       name,
-      createdAt: Date.now(),
-      order: folders.length // Set order to the end of the list
+      createdAt: Date.now()
     };
     
     setFolders(prevFolders => {
@@ -320,7 +282,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const exportRecording = (recording: Recording) => {
     try {
-      const audioData = getAudioFromStorage(recording.audioUrl);
+      const audioData = getAudioFromStorage(`audio-${recording.audioUrl}`);
       if (!audioData) {
         toast.error('Recording data not found');
         return;
@@ -341,75 +303,14 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // New function to toggle note selection for multi-select
-  const toggleNoteSelection = (noteId: string) => {
-    setSelectedNotes(prev => {
-      if (prev.includes(noteId)) {
-        return prev.filter(id => id !== noteId);
-      } else {
-        return [...prev, noteId];
-      }
-    });
-  };
-
-  // New function to clear all selected notes
-  const clearSelectedNotes = () => {
-    setSelectedNotes([]);
-  };
-
-  // New function to move multiple notes to a folder
-  const moveNotesToFolder = (noteIds: string[], folderId?: string) => {
-    setNotes(prevNotes => {
-      const updatedNotes = prevNotes.map(note => 
-        noteIds.includes(note.id) ? { ...note, folderId, updatedAt: Date.now() } : note
-      );
-      saveNotes(updatedNotes);
-      return updatedNotes;
-    });
-    
-    const folderName = folderId 
-      ? folders.find(f => f.id === folderId)?.name || 'selected folder' 
-      : 'Unfiled';
-    
-    toast.success(`${noteIds.length} notes moved to ${folderName}`);
-  };
-
-  // New function to reorder notes within a folder (for drag and drop)
-  const reorderNotes = (noteIds: string[], folderId?: string, startIndex: number, endIndex: number) => {
-    // This is a placeholder for drag-and-drop functionality
-    // The actual reordering will be handled when we implement drag-and-drop
-    console.log('Reordering notes:', { noteIds, folderId, startIndex, endIndex });
-  };
-
-  // New function to reorder folders
-  const reorderFolders = (result: {source: {index: number}, destination: {index: number}}) => {
-    const { source, destination } = result;
-    if (!destination) return;
-
-    const reorderedFolders = [...folders];
-    const [removed] = reorderedFolders.splice(source.index, 1);
-    reorderedFolders.splice(destination.index, 0, removed);
-
-    // Update order property
-    const updatedFolders = reorderedFolders.map((folder, index) => ({
-      ...folder,
-      order: index
-    }));
-
-    setFolders(updatedFolders);
-    saveFolders(updatedFolders);
-  };
-
   const contextValue: NoteContextType = {
     notes,
     folders,
     currentNote,
-    selectedNotes,
     setCurrentNote,
     createNote,
     updateNote,
     deleteNote,
-    deleteNotes,
     saveRecording,
     updateRecording,
     deleteRecording,
@@ -417,12 +318,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateFolder,
     deleteFolder,
     importRecording,
-    exportRecording,
-    toggleNoteSelection,
-    clearSelectedNotes,
-    moveNotesToFolder,
-    reorderNotes,
-    reorderFolders
+    exportRecording
   };
 
   return (

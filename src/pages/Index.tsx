@@ -9,11 +9,9 @@ import { Menu, Plus, HelpCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/App';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 
 const NoteContainer = () => {
-  const { notes, currentNote, createNote, selectedNotes, clearSelectedNotes } = useNotes();
+  const { notes, currentNote, createNote } = useNotes();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const isMobile = useIsMobile();
@@ -39,24 +37,14 @@ const NoteContainer = () => {
         setTheme(theme === 'light' ? 'dark' : 'light');
       }
       
-      // Add keyboard shortcut for multi-select
-      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
-        // We'll handle this in the context in future implementation
-      }
-      
       if (e.key === '?') {
         setShowKeyboardHelp(true);
-      }
-      
-      // Clear selection with Escape key
-      if (e.key === 'Escape' && selectedNotes.length > 0) {
-        clearSelectedNotes();
       }
     };
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [setTheme, theme, selectedNotes, clearSelectedNotes]);
+  }, [setTheme, theme]);
   
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
@@ -95,28 +83,14 @@ const NoteContainer = () => {
               </button>
             )}
             
-            <div className="absolute top-4 right-4 z-10 flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="p-2 rounded-md bg-background border shadow-sm hover:bg-accent transition-colors"
-                  >
-                    <HelpCircle size={18} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowKeyboardHelp(true)}>
-                    Keyboard shortcuts
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <a href="https://github.com/username/voice-canvas" target="_blank" rel="noopener noreferrer">
-                      GitHub repository
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="absolute top-4 right-4 z-10">
+              <button 
+                onClick={() => setShowKeyboardHelp(true)}
+                className="p-2 rounded-md bg-background border shadow-sm hover:bg-accent transition-colors"
+                aria-label="Keyboard shortcuts"
+              >
+                <HelpCircle size={18} />
+              </button>
             </div>
             
             {notes.length === 0 ? (
