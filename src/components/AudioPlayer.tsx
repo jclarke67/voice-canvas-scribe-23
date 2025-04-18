@@ -16,6 +16,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
   const [isMuted, setIsMuted] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
@@ -23,13 +24,22 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
   useEffect(() => {
     // Get audio from storage
     setIsLoading(true);
-    const storedAudio = getAudioFromStorage(`audio-${audioId}`);
-    if (storedAudio) {
-      setAudioUrl(storedAudio);
-    } else {
-      console.error(`Audio not found for ID: audio-${audioId}`);
+    setError(null);
+    
+    try {
+      const storedAudio = getAudioFromStorage(`audio-${audioId}`);
+      if (storedAudio) {
+        setAudioUrl(storedAudio);
+      } else {
+        console.error(`Audio not found for ID: audio-${audioId}`);
+        setError('Audio file not found');
+      }
+    } catch (e) {
+      console.error('Error loading audio:', e);
+      setError('Error loading audio');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
     
     // Clean up on unmount
     return () => {
@@ -41,7 +51,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
   }, [audioId]);
   
   useEffect(() => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !audioUrl) return;
     
     const updateTime = () => {
       if (audioRef.current) {
@@ -57,16 +67,23 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
       }
     };
     
+    const handleError = () => {
+      setError('Error playing audio');
+      setIsPlaying(false);
+    };
+    
     audioRef.current.addEventListener('timeupdate', updateTime);
     audioRef.current.addEventListener('ended', handleEnded);
+    audioRef.current.addEventListener('error', handleError);
     
     return () => {
       if (audioRef.current) {
         audioRef.current.removeEventListener('timeupdate', updateTime);
         audioRef.current.removeEventListener('ended', handleEnded);
+        audioRef.current.removeEventListener('error', handleError);
       }
     };
-  }, []);
+  }, [audioUrl]);
   
   const togglePlayPause = () => {
     if (!audioRef.current || !audioUrl) return;
@@ -80,8 +97,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
           audio.pause();
         }
       });
+      
+      // Play this audio
       audioRef.current.play().catch(err => {
         console.error('Failed to play audio:', err);
+        setError('Failed to play audio');
       });
     }
     
@@ -119,39 +139,44 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioId, duration, name }) =>
         <div className="text-sm font-medium mb-2">{name}</div>
       )}
       
-      <div className="flex items-center space-x-2">
-        <button 
-          onClick={togglePlayPause}
-          className={`h-8 w-8 rounded-full flex items-center justify-center text-primary-foreground transition-colors ${
-            isLoading ? 'bg-primary/50 cursor-wait' : 'bg-primary hover:bg-primary/90'
-          }`}
-          disabled={isLoading || !audioUrl}
-        >
-          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-        </button>
-        
-        <div 
-          ref={progressBarRef}
-          className="relative h-2 flex-1 bg-primary/20 rounded-full cursor-pointer"
-          onClick={handleProgressClick}
-        >
+      {error ? (
+        <div className="text-sm text-destructive py-2">{error}</div>
+      ) : (
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={togglePlayPause}
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-primary-foreground transition-colors ${
+              isLoading || !audioUrl ? 'bg-primary/50 cursor-wait' : 'bg-primary hover:bg-primary/90'
+            }`}
+            disabled={isLoading || !audioUrl || !!error}
+          >
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+          
           <div 
-            className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
-            style={{ width: `${progressPercent}%` }}
-          />
+            ref={progressBarRef}
+            className="relative h-2 flex-1 bg-primary/20 rounded-full cursor-pointer"
+            onClick={handleProgressClick}
+          >
+            <div 
+              className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          
+          <div className="text-xs text-muted-foreground min-w-[60px] text-right">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
+          
+          <button 
+            onClick={toggleMute}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            disabled={!audioUrl || !!error}
+          >
+            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
         </div>
-        
-        <div className="text-xs text-muted-foreground min-w-[60px] text-right">
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </div>
-        
-        <button 
-          onClick={toggleMute}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-        </button>
-      </div>
+      )}
     </div>
   );
 };

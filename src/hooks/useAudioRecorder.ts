@@ -83,21 +83,43 @@ export const useAudioRecorder = () => {
       const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
       
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = await saveAudioToStorage(audioBlob);
-        
-        // Stop all tracks in the stream
-        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
-        
-        // Clear the recording timer
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
+        try {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          
+          // Convert blob to base64 and save it
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            try {
+              const base64data = reader.result as string;
+              const audioId = Math.random().toString(36).substring(2, 15);
+              localStorage.setItem(`audio-${audioId}`, base64data);
+              
+              // Stop all tracks in the stream
+              mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+              
+              // Clear the recording timer
+              if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+              }
+              
+              setIsRecording(false);
+              setRecordingTime(0);
+              resolve({ audioUrl: audioId, duration });
+            } catch (error) {
+              console.error('Error saving audio:', error);
+              resolve(null);
+            }
+          };
+          reader.onerror = () => {
+            console.error('Error reading audio blob');
+            resolve(null);
+          };
+          reader.readAsDataURL(audioBlob);
+        } catch (error) {
+          console.error('Error creating audio blob:', error);
+          resolve(null);
         }
-        
-        setIsRecording(false);
-        setRecordingTime(0);
-        resolve({ audioUrl, duration });
       };
       
       mediaRecorderRef.current.stop();

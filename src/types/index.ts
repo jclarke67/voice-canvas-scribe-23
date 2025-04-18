@@ -33,7 +33,7 @@ export type NoteContextType = {
   createNote: (folderId?: string) => void;
   updateNote: (note: Note) => void;
   deleteNote: (id: string) => void;
-  saveRecording: (noteId: string, recording: Omit<Recording, 'id' | 'name'>) => void;
+  saveRecording: (noteId: string, recording: Omit<Recording, 'id' | 'name'>, name?: string) => void;
   updateRecording: (noteId: string, recordingId: string, updates: Partial<Recording>) => void;
   deleteRecording: (noteId: string, recordingId: string) => void;
   createFolder: (name: string) => void;
@@ -41,4 +41,11 @@ export type NoteContextType = {
   deleteFolder: (id: string) => void;
   importRecording: (noteId: string, file: File) => Promise<void>;
   exportRecording: (recording: Recording) => void;
+  // Add new types for multi-note selection
+  selectedNoteIds: string[];
+  toggleNoteSelection: (noteId: string) => void;
+  clearNoteSelection: () => void;
+  selectAllNotes: (folderId?: string) => void;
+  moveSelectedNotesToFolder: (folderId?: string) => void;
+  deleteSelectedNotes: () => void;
 };
