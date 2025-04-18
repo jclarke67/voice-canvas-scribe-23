@@ -8,7 +8,6 @@ import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 import { Menu, Plus, HelpCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/App';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 const NoteContainer = () => {
   const { notes, currentNote, createNote } = useNotes();
@@ -60,34 +59,10 @@ const NoteContainer = () => {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <div className="flex-1 flex overflow-hidden">
-        {sidebarOpen ? (
-          <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
-              <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={75}>
-              <div className="flex-1 flex flex-col overflow-hidden relative">
-                <div className="absolute top-4 right-4 z-10">
-                  <button 
-                    onClick={() => setShowKeyboardHelp(true)}
-                    className="p-2 rounded-md bg-background border shadow-sm hover:bg-accent transition-colors"
-                    aria-label="Keyboard shortcuts"
-                  >
-                    <HelpCircle size={18} />
-                  </button>
-                </div>
-                
-                {notes.length === 0 ? (
-                  <EmptyState />
-                ) : (
-                  <NoteEditor />
-                )}
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          <div className="flex-1 flex flex-col overflow-hidden relative">
+        <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+        
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {!sidebarOpen && (
             <button 
               onClick={toggleSidebar}
               className="absolute top-4 left-4 p-2 rounded-md bg-background border shadow-sm hover:bg-accent transition-colors z-10"
@@ -95,34 +70,34 @@ const NoteContainer = () => {
             >
               <Menu size={20} />
             </button>
-            
-            <div className="absolute top-4 right-4 z-10">
-              <button 
-                onClick={() => setShowKeyboardHelp(true)}
-                className="p-2 rounded-md bg-background border shadow-sm hover:bg-accent transition-colors"
-                aria-label="Keyboard shortcuts"
-              >
-                <HelpCircle size={18} />
-              </button>
-            </div>
-            
-            {notes.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <NoteEditor />
-            )}
+          )}
+          
+          <div className="absolute top-4 right-4 z-10">
+            <button 
+              onClick={() => setShowKeyboardHelp(true)}
+              className="p-2 rounded-md bg-background border shadow-sm hover:bg-accent transition-colors"
+              aria-label="Keyboard shortcuts"
+            >
+              <HelpCircle size={18} />
+            </button>
           </div>
-        )}
-        
-        {isMobile && (
-          <button
-            onClick={handleCreateNote}
-            className="fixed bottom-6 right-6 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors z-10"
-            aria-label="Create new note"
-          >
-            <Plus size={24} />
-          </button>
-        )}
+          
+          {notes.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <NoteEditor />
+          )}
+          
+          {isMobile && (
+            <button
+              onClick={handleCreateNote}
+              className="fixed bottom-6 right-6 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors z-10"
+              aria-label="Create new note"
+            >
+              <Plus size={24} />
+            </button>
+          )}
+        </div>
       </div>
       
       <KeyboardShortcutsHelp isOpen={showKeyboardHelp} onClose={() => setShowKeyboardHelp(false)} />

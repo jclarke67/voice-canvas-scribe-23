@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNotes } from '@/context/NoteContext';
 import NoteCard from './NoteCard';
-import { Plus, Search, Menu, FolderPlus, Folder, ChevronDown, ChevronRight, FileDown, Trash2, Pencil, CheckSquare } from 'lucide-react';
+import { Plus, Search, Menu, FolderPlus, Folder, ChevronDown, ChevronRight, FileDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeToggle from './ThemeToggle';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
@@ -10,12 +10,6 @@ import FolderManager from './FolderManager';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { exportFolderAsPDF, exportNotesAsPDF } from '@/lib/exportUtils';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import MultiSelectActions from './MultiSelectActions';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,22 +17,10 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
-  const { 
-    notes, 
-    folders, 
-    currentNote, 
-    setCurrentNote, 
-    createNote, 
-    deleteFolder, 
-    updateFolder,
-    selectAllNotes,
-    selectedNotes
-  } = useNotes();
-  
+  const { notes, folders, currentNote, setCurrentNote, createNote, deleteFolder } = useNotes();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [showFolderManager, setShowFolderManager] = useState(false);
-  const [folderToRename, setFolderToRename] = useState<{id: string, name: string} | null>(null);
   
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -73,26 +55,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     
     exportNotesAsPDF(notes, 'All Notes');
   };
-
-  const handleRenameFolder = (folderId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent folder toggle
-    const folder = folders.find(f => f.id === folderId);
-    if (folder) {
-      setFolderToRename({ id: folder.id, name: folder.name });
-    }
-  };
-  
-  const handleRenameFolderSubmit = () => {
-    if (folderToRename) {
-      updateFolder(folderToRename.id, folderToRename.name);
-      setFolderToRename(null);
-    }
-  };
-  
-  const handleSelectAllInFolder = (folderId: string | undefined, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent folder toggle
-    selectAllNotes(folderId);
-  };
   
   const filteredNotes = searchTerm 
     ? notes.filter(note => 
@@ -111,29 +73,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     folderNotes[folder.id] = sortedNotes.filter(note => note.folderId === folder.id);
   });
   
-  // Handle drag and drop of files (for audio import)
-  const handleFileDrop = (e: React.DragEvent, noteId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const files = Array.from(e.dataTransfer.files);
-    const audioFiles = files.filter(file => file.type.startsWith('audio/'));
-    
-    if (audioFiles.length > 0) {
-      Promise.all(audioFiles.map(file => {
-        return setCurrentNote(notes.find(note => note.id === noteId) || null);
-      })).then(() => {
-        toast.success(`${audioFiles.length} recording(s) ready for import`);
-      });
-    }
-  };
-  
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-  
   return (
-    <DndProvider backend={HTML5Backend}>
+    <>
       <div 
         className={cn(
           "h-full border-r bg-card transition-all duration-300 flex flex-col",
@@ -165,8 +106,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             />
           </div>
         </div>
-        
-        {selectedNotes.length > 0 && <MultiSelectActions />}
         
         <div className="flex-1 overflow-y-auto p-2">
           {searchTerm && sortedNotes.length === 0 && (
@@ -217,25 +156,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                 </div>
                 <div className="flex items-center space-x-1">
                   <button
-                    onClick={(e) => handleSelectAllInFolder(folder.id, e)}
-                    className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                    title="Select all notes in this folder"
-                  >
-                    <CheckSquare size={14} />
-                  </button>
-                  <button
                     onClick={(e) => handleExportFolder(folder.id, e)}
                     className="p-1 rounded-md hover:bg-accent text-muted-foreground"
                     title="Export folder"
                   >
                     <FileDown size={14} />
-                  </button>
-                  <button
-                    onClick={(e) => handleRenameFolder(folder.id, e)}
-                    className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                    title="Rename folder"
-                  >
-                    <Pencil size={14} />
                   </button>
                   <button
                     onClick={(e) => handleDeleteFolder(folder.id, e)}
@@ -253,19 +178,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               </CollapsibleTrigger>
               <CollapsibleContent className="ml-4 mt-1 space-y-1">
                 {folderNotes[folder.id]?.length > 0 ? (
-                  folderNotes[folder.id].map((note, index) => (
-                    <div 
+                  folderNotes[folder.id].map(note => (
+                    <NoteCard
                       key={note.id}
-                      onDrop={(e) => handleFileDrop(e, note.id)}
-                      onDragOver={handleDragOver}
-                    >
-                      <NoteCard
-                        note={note}
-                        isActive={currentNote?.id === note.id}
-                        onClick={() => setCurrentNote(note)}
-                        index={index}
-                      />
-                    </div>
+                      note={note}
+                      isActive={currentNote?.id === note.id}
+                      onClick={() => setCurrentNote(note)}
+                    />
                   ))
                 ) : (
                   <div className="text-xs text-muted-foreground p-2">
@@ -288,61 +207,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               <div className="text-sm font-medium text-muted-foreground px-2 py-1">
                 Unfiled Notes
               </div>
-              <div className="flex space-x-1">
-                <button
-                  onClick={(e) => handleSelectAllInFolder(undefined, e)}
-                  className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                  title="Select all unfiled notes"
-                >
-                  <CheckSquare size={14} />
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                      title="Export unfiled notes"
-                    >
-                      <FileDown size={16} />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => exportNotesAsPDF(unfilteredNotes, 'Unfiled Notes')}>
-                      Export as PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1 rounded-md hover:bg-accent text-muted-foreground"
+                    title="Export unfiled notes"
+                  >
+                    <FileDown size={16} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => exportNotesAsPDF(unfilteredNotes, 'Unfiled Notes')}>
+                    Export as PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
           
           {searchTerm 
-            ? sortedNotes.map((note, index) => (
-                <div 
+            ? sortedNotes.map(note => (
+                <NoteCard
                   key={note.id}
-                  onDrop={(e) => handleFileDrop(e, note.id)} 
-                  onDragOver={handleDragOver}
-                >
-                  <NoteCard
-                    note={note}
-                    isActive={currentNote?.id === note.id}
-                    onClick={() => setCurrentNote(note)}
-                    index={index}
-                  />
-                </div>
+                  note={note}
+                  isActive={currentNote?.id === note.id}
+                  onClick={() => setCurrentNote(note)}
+                />
               ))
-            : unfilteredNotes.map((note, index) => (
-                <div 
+            : unfilteredNotes.map(note => (
+                <NoteCard
                   key={note.id}
-                  onDrop={(e) => handleFileDrop(e, note.id)}
-                  onDragOver={handleDragOver}
-                >
-                  <NoteCard
-                    note={note}
-                    isActive={currentNote?.id === note.id}
-                    onClick={() => setCurrentNote(note)}
-                    index={index}
-                  />
-                </div>
+                  note={note}
+                  isActive={currentNote?.id === note.id}
+                  onClick={() => setCurrentNote(note)}
+                />
               ))
           }
           
@@ -362,33 +260,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             New Note
           </button>
         </div>
-        
-        {/* Folder Rename Dialog */}
-        <Dialog 
-          open={folderToRename !== null} 
-          onOpenChange={(open) => !open && setFolderToRename(null)}
-        >
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Rename Folder</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <Input
-                value={folderToRename?.name || ''}
-                onChange={(e) => setFolderToRename(prev => prev ? {...prev, name: e.target.value} : null)}
-                placeholder="Folder name"
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setFolderToRename(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleRenameFolderSubmit}>
-                Save
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
       
       {showFolderManager && (
@@ -397,7 +268,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           onClose={() => setShowFolderManager(false)} 
         />
       )}
-    </DndProvider>
+    </>
   );
 };
 

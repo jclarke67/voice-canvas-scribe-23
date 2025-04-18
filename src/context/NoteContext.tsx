@@ -10,7 +10,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
-  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
 
   useEffect(() => {
     const savedNotes = getNotes();
@@ -77,48 +76,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return updatedNotes;
     });
-    
-    // Remove from selected notes if it was selected
-    if (selectedNotes.includes(id)) {
-      setSelectedNotes(prev => prev.filter(noteId => noteId !== id));
-    }
-    
     toast.success('Note deleted');
-  };
-  
-  const deleteNotes = (ids: string[]) => {
-    if (ids.length === 0) return;
-    
-    // Clean up recordings for all notes being deleted
-    ids.forEach(id => {
-      const noteToDelete = notes.find(note => note.id === id);
-      if (noteToDelete) {
-        noteToDelete.recordings.forEach(recording => {
-          removeAudioFromStorage(`audio-${recording.audioUrl}`);
-        });
-      }
-    });
-    
-    setNotes(prevNotes => {
-      const updatedNotes = prevNotes.filter(note => !ids.includes(note.id));
-      saveNotes(updatedNotes);
-      
-      // Update current note if it was deleted
-      if (currentNote && ids.includes(currentNote.id)) {
-        if (updatedNotes.length > 0) {
-          setCurrentNote(updatedNotes[0]);
-        } else {
-          setCurrentNote(null);
-        }
-      }
-      
-      return updatedNotes;
-    });
-    
-    // Clear selected notes
-    setSelectedNotes([]);
-    
-    toast.success(`${ids.length} note${ids.length !== 1 ? 's' : ''} deleted`);
   };
 
   const saveRecording = (noteId: string, recordingData: Omit<Recording, 'id' | 'name'>) => {
@@ -344,114 +302,15 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.error('Failed to export recording');
     }
   };
-  
-  // Note selection functions
-  const toggleNoteSelection = (noteId: string) => {
-    setSelectedNotes(prev => {
-      if (prev.includes(noteId)) {
-        return prev.filter(id => id !== noteId);
-      } else {
-        return [...prev, noteId];
-      }
-    });
-  };
-  
-  const selectAllNotes = (folderId?: string) => {
-    const notesToSelect = notes
-      .filter(note => folderId ? note.folderId === folderId : true)
-      .map(note => note.id);
-    
-    setSelectedNotes(notesToSelect);
-  };
-  
-  const clearNoteSelection = () => {
-    setSelectedNotes([]);
-  };
-  
-  const isNoteSelected = (noteId: string) => {
-    return selectedNotes.includes(noteId);
-  };
-  
-  // Bulk move notes to a folder
-  const moveNotesToFolder = (noteIds: string[], folderId?: string) => {
-    if (noteIds.length === 0) return;
-    
-    setNotes(prevNotes => {
-      const updatedNotes = prevNotes.map(note => {
-        if (noteIds.includes(note.id)) {
-          return { ...note, folderId, updatedAt: Date.now() };
-        }
-        return note;
-      });
-      
-      saveNotes(updatedNotes);
-      
-      // Update current note if it was moved
-      if (currentNote && noteIds.includes(currentNote.id)) {
-        const updatedCurrentNote = updatedNotes.find(note => note.id === currentNote.id);
-        if (updatedCurrentNote) {
-          setCurrentNote(updatedCurrentNote);
-        }
-      }
-      
-      return updatedNotes;
-    });
-    
-    clearNoteSelection();
-    
-    const folderName = folderId 
-      ? folders.find(f => f.id === folderId)?.name || 'folder' 
-      : 'Unfiled';
-    
-    toast.success(`${noteIds.length} note${noteIds.length !== 1 ? 's' : ''} moved to ${folderName}`);
-  };
-  
-  // Reorder notes within a folder via drag and drop
-  const reorderNotes = (sourceIndex: number, destinationIndex: number, folderId?: string) => {
-    setNotes(prevNotes => {
-      // Get the notes in the specified folder (or unfiled if no folder)
-      const folderNotes = prevNotes
-        .filter(note => folderId ? note.folderId === folderId : !note.folderId)
-        .sort((a, b) => b.updatedAt - a.updatedAt);
-      
-      // Get the note being moved
-      const movingNote = folderNotes[sourceIndex];
-      if (!movingNote) return prevNotes;
-      
-      // Create a new array with the note removed
-      const reorderedNotes = [...folderNotes];
-      reorderedNotes.splice(sourceIndex, 1);
-      
-      // Insert the note at the destination
-      reorderedNotes.splice(destinationIndex, 0, movingNote);
-      
-      // Update the timestamps to maintain the new order
-      const updatedNotes = reorderedNotes.map((note, index) => ({
-        ...note,
-        updatedAt: Date.now() - (index * 1000) // Ensure proper ordering
-      }));
-      
-      // Merge the reordered notes back with the notes from other folders
-      const otherNotes = prevNotes.filter(note => 
-        folderId ? note.folderId !== folderId : note.folderId !== undefined
-      );
-      
-      const result = [...otherNotes, ...updatedNotes];
-      saveNotes(result);
-      return result;
-    });
-  };
 
   const contextValue: NoteContextType = {
     notes,
     folders,
     currentNote,
-    selectedNotes,
     setCurrentNote,
     createNote,
     updateNote,
     deleteNote,
-    deleteNotes,
     saveRecording,
     updateRecording,
     deleteRecording,
@@ -459,13 +318,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateFolder,
     deleteFolder,
     importRecording,
-    exportRecording,
-    toggleNoteSelection,
-    selectAllNotes,
-    clearNoteSelection,
-    moveNotesToFolder,
-    reorderNotes,
-    isNoteSelected
+    exportRecording
   };
 
   return (

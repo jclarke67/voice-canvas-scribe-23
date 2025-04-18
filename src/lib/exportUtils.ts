@@ -13,10 +13,7 @@ const formatDateForFilename = (date: number): string => {
 // Export a single note as text file
 export const exportNoteAsText = (note: Note): void => {
   try {
-    // Strip HTML tags for plain text export
-    const contentWithoutHtml = note.content.replace(/<[^>]*>?/gm, '');
-    
-    const blob = new Blob([`${note.title}\n\n${contentWithoutHtml}`], { type: 'text/plain' });
+    const blob = new Blob([`${note.title}\n\n${note.content}`], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     
     const a = document.createElement('a');
@@ -105,11 +102,8 @@ export const exportNotesAsPDF = (notes: Note[], title: string = 'Notes Export'):
       // Add note content with word wrapping
       doc.setFontSize(10);
       
-      // Strip HTML tags for PDF export
-      const contentWithoutHtml = note.content.replace(/<[^>]*>?/gm, '');
-      
       // Split content into lines with word wrapping
-      const splitText = doc.splitTextToSize(contentWithoutHtml, 170);
+      const splitText = doc.splitTextToSize(note.content, 170);
       
       // Check if we need a new page for the content
       if (yPos + splitText.length * 4 > 280) {
