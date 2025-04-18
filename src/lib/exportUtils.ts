@@ -1,3 +1,4 @@
+
 import { Note, Recording, Folder } from '@/types';
 import { getAudioFromStorage } from './storage';
 import { jsPDF } from 'jspdf';
@@ -98,40 +99,27 @@ export const exportNotesAsPDF = (notes: Note[], title: string = 'Notes Export'):
       doc.line(20, yPos, 190, yPos);
       yPos += 7;
       
-      // Add note content with word wrapping and pagination
+      // Add note content with word wrapping
       doc.setFontSize(10);
       
       // Split content into lines with word wrapping
-      const splitText = doc.splitTextToSize(note.content || '', 170);
+      const splitText = doc.splitTextToSize(note.content, 170);
       
-      // Process content in chunks that fit on a page
-      for (let i = 0; i < splitText.length; i++) {
-        if (yPos > 280) {
-          doc.addPage();
-          yPos = 20;
-          // Add continuation header
-          doc.setFontSize(8);
-          doc.text(`${note.title || 'Untitled Note'} (continued)`, 20, yPos);
-          doc.setFontSize(10);
-          yPos += 10;
-        }
-        
-        doc.text(splitText[i], 20, yPos);
-        yPos += 5;
+      // Check if we need a new page for the content
+      if (yPos + splitText.length * 4 > 280) {
+        doc.addPage();
+        yPos = 20;
       }
       
-      // Add extra space between notes
-      yPos += 10;
+      // Add the content
+      doc.text(splitText, 20, yPos);
+      yPos += splitText.length * 4 + 15;
       
       // Add separator between notes
       if (index < notes.length - 1) {
-        if (yPos > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
         doc.setLineWidth(0.2);
-        doc.line(15, yPos - 5, 195, yPos - 5);
-        yPos += 15;
+        doc.line(15, yPos - 7, 195, yPos - 7);
+        yPos += 10;
       }
     });
     

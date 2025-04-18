@@ -61,46 +61,22 @@ export const saveAudioToStorage = async (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      try {
-        const base64data = reader.result as string;
-        const audioId = generateId();
-        localStorage.setItem(`audio-${audioId}`, base64data);
-        resolve(audioId);
-      } catch (error) {
-        console.error('Error saving audio to storage:', error);
-        reject(error);
-      }
+      const base64data = reader.result as string;
+      const audioId = generateId();
+      localStorage.setItem(`audio-${audioId}`, base64data);
+      resolve(audioId);
     };
-    reader.onerror = (error) => {
-      console.error('Error reading audio blob:', error);
-      reject(error);
-    };
+    reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
 };
 
 // Get audio blob from localStorage
 export const getAudioFromStorage = (audioId: string): string | null => {
-  const data = localStorage.getItem(audioId);
-  if (!data) {
-    console.warn(`Audio data not found for ID: ${audioId}`);
-  }
-  return data;
+  return localStorage.getItem(`audio-${audioId}`);
 };
 
 // Remove audio blob from localStorage
 export const removeAudioFromStorage = (audioId: string): void => {
-  localStorage.removeItem(audioId);
-};
-
-// List all audio keys in localStorage (for debugging)
-export const listAudioKeys = (): string[] => {
-  const keys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('audio-')) {
-      keys.push(key);
-    }
-  }
-  return keys;
+  localStorage.removeItem(`audio-${audioId}`);
 };

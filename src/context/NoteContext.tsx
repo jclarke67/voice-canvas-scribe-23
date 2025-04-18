@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Note, NoteContextType, Recording, Folder } from '@/types';
 import { getNotes, saveNotes, createEmptyNote, generateId, getAudioFromStorage, removeAudioFromStorage, getFolders, saveFolders } from '@/lib/storage';
@@ -9,7 +10,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
-  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
 
   useEffect(() => {
     const savedNotes = getNotes();
@@ -76,19 +76,13 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return updatedNotes;
     });
-    
-    // Remove from selected notes if it's there
-    if (selectedNoteIds.includes(id)) {
-      setSelectedNoteIds(prev => prev.filter(noteId => noteId !== id));
-    }
-    
     toast.success('Note deleted');
   };
 
-  const saveRecording = (noteId: string, recordingData: Omit<Recording, 'id' | 'name'>, name?: string) => {
+  const saveRecording = (noteId: string, recordingData: Omit<Recording, 'id' | 'name'>) => {
     const recording: Recording = {
       id: generateId(),
-      name: name || `Recording ${new Date().toLocaleString()}`, // Default name or provided name
+      name: `Recording ${new Date().toLocaleString()}`, // Default name
       ...recordingData
     };
 
@@ -235,12 +229,15 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const arrayBuffer = await file.arrayBuffer();
       const blob = new Blob([arrayBuffer], { type: file.type });
       
-      // Convert blob to base64 for storage
-      const base64data = await new Promise<string>((resolve, reject) => {
+      // Use the storage utility to save the audio file
+      const audioUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           try {
-            resolve(reader.result as string);
+            const base64data = reader.result as string;
+            const audioId = generateId();
+            localStorage.setItem(`audio-${audioId}`, base64data);
+            resolve(audioId);
           } catch (error) {
             reject(error);
           }
@@ -248,10 +245,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-      
-      // Generate ID and store the audio
-      const audioId = generateId();
-      localStorage.setItem(`audio-${audioId}`, base64data);
       
       // Create a new audio element to get the duration
       const audio = new Audio();
@@ -264,17 +257,14 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Create a new recording
           const recording: Omit<Recording, 'id' | 'name'> = {
-            audioUrl: audioId,
+            audioUrl,
             duration,
             timestamp: 0, // Default to the beginning of the note
             createdAt: Date.now()
           };
           
-          // Use the file name as the recording name if possible
-          const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-          
-          // Save the recording with the name
-          saveRecording(noteId, recording, fileName || undefined);
+          // Save the recording
+          saveRecording(noteId, recording);
           resolve();
         };
         audio.onerror = () => {
@@ -313,90 +303,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const toggleNoteSelection = (noteId: string) => {
-    setSelectedNoteIds(prev => {
-      if (prev.includes(noteId)) {
-        return prev.filter(id => id !== noteId);
-      } else {
-        return [...prev, noteId];
-      }
-    });
-  };
-
-  const clearNoteSelection = () => {
-    setSelectedNoteIds([]);
-  };
-
-  const selectAllNotes = (folderId?: string) => {
-    // If folderId is provided, select all notes in that folder
-    // Otherwise, select all notes
-    const notesToSelect = folderId 
-      ? notes.filter(note => note.folderId === folderId)
-      : notes;
-    
-    setSelectedNoteIds(notesToSelect.map(note => note.id));
-  };
-
-  const moveSelectedNotesToFolder = (folderId?: string) => {
-    if (selectedNoteIds.length === 0) return;
-
-    setNotes(prevNotes => {
-      const updatedNotes = prevNotes.map(note => 
-        selectedNoteIds.includes(note.id)
-          ? { ...note, folderId, updatedAt: Date.now() }
-          : note
-      );
-      
-      saveNotes(updatedNotes);
-      
-      // Update current note if it's one of the moved notes
-      if (currentNote && selectedNoteIds.includes(currentNote.id)) {
-        const updatedCurrentNote = updatedNotes.find(note => note.id === currentNote.id);
-        if (updatedCurrentNote) {
-          setCurrentNote(updatedCurrentNote);
-        }
-      }
-      
-      return updatedNotes;
-    });
-    
-    toast.success(`Moved ${selectedNoteIds.length} note${selectedNoteIds.length > 1 ? 's' : ''} ${folderId ? 'to folder' : 'to Unfiled'}`);
-    clearNoteSelection();
-  };
-
-  const deleteSelectedNotes = () => {
-    if (selectedNoteIds.length === 0) return;
-    
-    // Clean up recordings for all selected notes
-    selectedNoteIds.forEach(noteId => {
-      const noteToDelete = notes.find(note => note.id === noteId);
-      if (noteToDelete) {
-        noteToDelete.recordings.forEach(recording => {
-          removeAudioFromStorage(`audio-${recording.audioUrl}`);
-        });
-      }
-    });
-    
-    setNotes(prevNotes => {
-      const updatedNotes = prevNotes.filter(note => !selectedNoteIds.includes(note.id));
-      saveNotes(updatedNotes);
-      
-      // If the current note is deleted, set current note to the first available note or null
-      if (currentNote && selectedNoteIds.includes(currentNote.id)) {
-        if (updatedNotes.length > 0) {
-          setCurrentNote(updatedNotes[0]);
-        } else {
-          setCurrentNote(null);
-        }
-      }
-      
-      return updatedNotes;
-    });
-    
-    toast.success(`Deleted ${selectedNoteIds.length} note${selectedNoteIds.length > 1 ? 's' : ''}`);
-    clearNoteSelection();
-  };
-
   const contextValue: NoteContextType = {
     notes,
     folders,
@@ -412,13 +318,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateFolder,
     deleteFolder,
     importRecording,
-    exportRecording,
-    selectedNoteIds,
-    toggleNoteSelection,
-    clearNoteSelection,
-    selectAllNotes,
-    moveSelectedNotesToFolder,
-    deleteSelectedNotes
+    exportRecording
   };
 
   return (

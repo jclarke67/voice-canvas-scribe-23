@@ -10,7 +10,6 @@ import FolderManager from './FolderManager';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { exportFolderAsPDF, exportNotesAsPDF } from '@/lib/exportUtils';
 import { toast } from 'sonner';
-import MultiSelectControls from './MultiSelectControls';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,12 +17,10 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
-  const { notes, folders, currentNote, setCurrentNote, createNote, deleteFolder, updateFolder } = useNotes();
+  const { notes, folders, currentNote, setCurrentNote, createNote, deleteFolder } = useNotes();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [showFolderManager, setShowFolderManager] = useState(false);
-  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
-  const [editingFolderName, setEditingFolderName] = useState('');
   
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -68,6 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   
   const sortedNotes = [...filteredNotes].sort((a, b) => b.updatedAt - a.updatedAt);
   
+  // Group notes by folder
   const unfilteredNotes = sortedNotes.filter(note => !note.folderId);
   const folderNotes: Record<string, typeof sortedNotes> = {};
   
@@ -75,210 +73,202 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     folderNotes[folder.id] = sortedNotes.filter(note => note.folderId === folder.id);
   });
   
-  const handleStartEditingFolder = (folderId: string, folderName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingFolderId(folderId);
-    setEditingFolderName(folderName);
-  };
-  
-  const handleSaveFolder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingFolderId && editingFolderName.trim()) {
-      updateFolder(editingFolderId, editingFolderName.trim());
-      setEditingFolderId(null);
-      setEditingFolderName('');
-    }
-  };
-  
   return (
-    <div className="h-full flex flex-col bg-background border-r">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h1 className="font-semibold text-lg">Voice Canvas</h1>
-        <div className="flex items-center space-x-1">
-          <ThemeToggle />
-          <button 
-            onClick={toggleSidebar}
-            className="p-1 rounded-md hover:bg-accent"
+    <>
+      <div 
+        className={cn(
+          "h-full border-r bg-card transition-all duration-300 flex flex-col",
+          isOpen ? "w-64" : "w-0 overflow-hidden"
+        )}
+      >
+        <div className="flex items-center justify-between p-4 border-b">
+          <h1 className="font-semibold text-lg">Voice Canvas</h1>
+          <div className="flex items-center space-x-1">
+            <ThemeToggle />
+            <button 
+              onClick={toggleSidebar}
+              className="p-1 rounded-md hover:bg-accent"
+            >
+              <Menu size={20} />
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-2 border-b">
+          <div className="relative">
+            <Search size={16} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search notes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full py-2 pl-8 pr-3 text-sm bg-accent/50 border-none rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+            />
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-2">
+          {searchTerm && sortedNotes.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
+              <p className="mb-2">No notes found</p>
+              <p className="text-sm">Try a different search term</p>
+            </div>
+          )}
+          
+          {!searchTerm && (
+            <div className="mb-2 flex justify-between items-center">
+              <div className="text-sm font-medium text-muted-foreground px-2 py-1">
+                Folders
+              </div>
+              <div className="flex space-x-1">
+                <button
+                  onClick={handleExportAllNotes}
+                  className="p-1 rounded-md hover:bg-accent text-muted-foreground"
+                  title="Export all notes"
+                >
+                  <FileDown size={16} />
+                </button>
+                <button 
+                  onClick={() => setShowFolderManager(true)}
+                  className="p-1 rounded-md hover:bg-accent text-muted-foreground"
+                  title="Manage folders"
+                >
+                  <FolderPlus size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {!searchTerm && folders.map(folder => (
+            <Collapsible 
+              key={folder.id}
+              open={expandedFolders[folder.id]} 
+              onOpenChange={() => toggleFolder(folder.id)}
+              className="mb-1"
+            >
+              <CollapsibleTrigger className="w-full flex items-center justify-between p-2 hover:bg-accent/50 rounded-md">
+                <div className="flex items-center text-sm">
+                  <Folder size={16} className="mr-2 text-primary" />
+                  <span>{folder.name}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    ({folderNotes[folder.id]?.length || 0})
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={(e) => handleExportFolder(folder.id, e)}
+                    className="p-1 rounded-md hover:bg-accent text-muted-foreground"
+                    title="Export folder"
+                  >
+                    <FileDown size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteFolder(folder.id, e)}
+                    className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-destructive"
+                    title="Delete folder"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  {expandedFolders[folder.id] ? (
+                    <ChevronDown size={16} className="text-muted-foreground" />
+                  ) : (
+                    <ChevronRight size={16} className="text-muted-foreground" />
+                  )}
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="ml-4 mt-1 space-y-1">
+                {folderNotes[folder.id]?.length > 0 ? (
+                  folderNotes[folder.id].map(note => (
+                    <NoteCard
+                      key={note.id}
+                      note={note}
+                      isActive={currentNote?.id === note.id}
+                      onClick={() => setCurrentNote(note)}
+                    />
+                  ))
+                ) : (
+                  <div className="text-xs text-muted-foreground p-2">
+                    No notes in this folder
+                  </div>
+                )}
+                <button
+                  onClick={() => createNote(folder.id)}
+                  className="w-full text-left text-xs p-2 text-muted-foreground hover:bg-accent/50 rounded-md flex items-center"
+                >
+                  <Plus size={14} className="mr-1" />
+                  New note in this folder
+                </button>
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
+          
+          {!searchTerm && (
+            <div className="mb-2 mt-4 flex justify-between items-center">
+              <div className="text-sm font-medium text-muted-foreground px-2 py-1">
+                Unfiled Notes
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1 rounded-md hover:bg-accent text-muted-foreground"
+                    title="Export unfiled notes"
+                  >
+                    <FileDown size={16} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => exportNotesAsPDF(unfilteredNotes, 'Unfiled Notes')}>
+                    Export as PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+          
+          {searchTerm 
+            ? sortedNotes.map(note => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  isActive={currentNote?.id === note.id}
+                  onClick={() => setCurrentNote(note)}
+                />
+              ))
+            : unfilteredNotes.map(note => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  isActive={currentNote?.id === note.id}
+                  onClick={() => setCurrentNote(note)}
+                />
+              ))
+          }
+          
+          {!searchTerm && unfilteredNotes.length === 0 && (
+            <div className="text-xs text-muted-foreground p-2">
+              No unfiled notes
+            </div>
+          )}
+        </div>
+        
+        <div className="p-3 border-t">
+          <button
+            onClick={() => createNote()}
+            className="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center"
           >
-            <Menu size={20} />
+            <Plus size={16} className="mr-1" />
+            New Note
           </button>
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4">
-        <MultiSelectControls />
-        
-        {searchTerm && sortedNotes.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
-            <p className="mb-2">No notes found</p>
-            <p className="text-sm">Try a different search term</p>
-          </div>
-        )}
-        
-        {!searchTerm && (
-          <div className="mb-2 flex justify-between items-center">
-            <div className="text-sm font-medium text-muted-foreground px-2 py-1">
-              Folders
-            </div>
-            <div className="flex space-x-1">
-              <button
-                onClick={handleExportAllNotes}
-                className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                title="Export all notes"
-              >
-                <FileDown size={16} />
-              </button>
-              <button 
-                onClick={() => setShowFolderManager(true)}
-                className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                title="Manage folders"
-              >
-                <FolderPlus size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {!searchTerm && folders.map(folder => (
-          <Collapsible 
-            key={folder.id}
-            open={expandedFolders[folder.id]} 
-            onOpenChange={() => toggleFolder(folder.id)}
-            className="mb-1"
-          >
-            <CollapsibleTrigger className="w-full flex items-center justify-between p-2 hover:bg-accent/50 rounded-md">
-              <div className="flex items-center text-sm flex-1">
-                <Folder size={16} className="mr-2 text-primary" />
-                {editingFolderId === folder.id ? (
-                  <form onSubmit={handleSaveFolder} className="flex-1">
-                    <input
-                      type="text"
-                      value={editingFolderName}
-                      onChange={(e) => setEditingFolderName(e.target.value)}
-                      onBlur={handleSaveFolder}
-                      className="w-full bg-background px-2 py-1 rounded-md text-sm"
-                      autoFocus
-                    />
-                  </form>
-                ) : (
-                  <>
-                    <span 
-                      onDoubleClick={(e) => handleStartEditingFolder(folder.id, folder.name, e)}
-                      className="flex-1"
-                    >
-                      {folder.name}
-                    </span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({folderNotes[folder.id]?.length || 0})
-                    </span>
-                  </>
-                )}
-              </div>
-              
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={(e) => handleExportFolder(folder.id, e)}
-                  className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                  title="Export folder"
-                >
-                  <FileDown size={14} />
-                </button>
-                <button
-                  onClick={(e) => handleDeleteFolder(folder.id, e)}
-                  className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-destructive"
-                  title="Delete folder"
-                >
-                  <Trash2 size={14} />
-                </button>
-                {expandedFolders[folder.id] ? (
-                  <ChevronDown size={16} className="text-muted-foreground" />
-                ) : (
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                )}
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="ml-4 mt-1 space-y-1">
-              {folderNotes[folder.id]?.length > 0 ? (
-                folderNotes[folder.id].map(note => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    isActive={currentNote?.id === note.id}
-                  />
-                ))
-              ) : (
-                <div className="text-xs text-muted-foreground p-2">
-                  No notes in this folder
-                </div>
-              )}
-              <button
-                onClick={() => createNote(folder.id)}
-                className="w-full text-left text-xs p-2 text-muted-foreground hover:bg-accent/50 rounded-md flex items-center"
-              >
-                <Plus size={14} className="mr-1" />
-                New note in this folder
-              </button>
-            </CollapsibleContent>
-          </Collapsible>
-        ))}
-        
-        {!searchTerm && (
-          <div className="mb-2 mt-4 flex justify-between items-center">
-            <div className="text-sm font-medium text-muted-foreground px-2 py-1">
-              Unfiled Notes
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                  title="Export unfiled notes"
-                >
-                  <FileDown size={16} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => exportNotesAsPDF(unfilteredNotes, 'Unfiled Notes')}>
-                  Export as PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
-        
-        {searchTerm 
-          ? sortedNotes.map(note => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                isActive={currentNote?.id === note.id}
-              />
-            ))
-          : unfilteredNotes.map(note => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                isActive={currentNote?.id === note.id}
-              />
-            ))
-        }
-        
-        {!searchTerm && unfilteredNotes.length === 0 && (
-          <div className="text-xs text-muted-foreground p-2">
-            No unfiled notes
-          </div>
-        )}
-      </div>
-      
-      <div className="p-3 border-t">
-        <button
-          onClick={() => createNote()}
-          className="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center"
-        >
-          <Plus size={16} className="mr-1" />
-          New Note
-        </button>
-      </div>
-    </div>
+      {showFolderManager && (
+        <FolderManager 
+          isOpen={showFolderManager} 
+          onClose={() => setShowFolderManager(false)} 
+        />
+      )}
+    </>
   );
 };
 

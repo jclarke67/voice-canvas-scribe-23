@@ -25,7 +25,6 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
   const [currentNote, setCurrentNote] = useState(() => notes.find(note => note.id === noteId));
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     setCurrentNote(notes.find(note => note.id === noteId));
@@ -41,9 +40,7 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
     };
   }, []);
   
-  const handlePlay = (e: React.MouseEvent, recording: Recording) => {
-    e.stopPropagation(); // Prevent the dropdown from closing
-    
+  const handlePlay = (recording: Recording) => {
     if (!audioRef.current) return;
     
     if (playingId === recording.id) {
@@ -76,14 +73,11 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
     }
   };
   
-  const handleExport = (e: React.MouseEvent, recording: Recording) => {
-    e.stopPropagation(); // Prevent the dropdown from closing
+  const handleExport = (recording: Recording) => {
     exportRecording(recording);
   };
   
-  const handleDelete = (e: React.MouseEvent, recordingId: string) => {
-    e.stopPropagation(); // Prevent the dropdown from closing
-    
+  const handleDelete = (recordingId: string) => {
     if (window.confirm('Are you sure you want to delete this recording?')) {
       deleteRecording(noteId, recordingId);
       if (playingId === recordingId && audioRef.current) {
@@ -105,7 +99,7 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
     <>
       <audio ref={audioRef} />
       
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
+      <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" title="Voice recordings">
             <Headphones size={16} />
@@ -117,7 +111,7 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
           
           {currentNote.recordings.map((recording) => (
             <React.Fragment key={recording.id}>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 py-2 cursor-default" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuItem className="flex flex-col items-start gap-1 py-2 cursor-default">
                 <div className="flex w-full justify-between items-center">
                   <span className="font-medium truncate max-w-[140px]">{recording.name}</span>
                   <span className="text-xs text-muted-foreground">
@@ -130,7 +124,7 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
                     variant="ghost" 
                     size="sm"
                     className="h-7 w-7 p-0"
-                    onClick={(e) => handlePlay(e, recording)}
+                    onClick={() => handlePlay(recording)}
                   >
                     {playingId === recording.id ? (
                       <Pause size={14} />
@@ -144,7 +138,7 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0"
-                      onClick={(e) => handleExport(e, recording)}
+                      onClick={() => handleExport(recording)}
                     >
                       <Download size={14} />
                     </Button>
@@ -153,7 +147,7 @@ const VoiceRecordingsDropdown: React.FC<VoiceRecordingsDropdownProps> = ({ noteI
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0 hover:text-destructive"
-                      onClick={(e) => handleDelete(e, recording.id)}
+                      onClick={() => handleDelete(recording.id)}
                     >
                       <Trash2 size={14} />
                     </Button>
